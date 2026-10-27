@@ -1,0 +1,26 @@
+# Normalize all text files to LF in the repository (ADR: line endings).
+# Git converts CRLF -> LF on commit; the working tree keeps what the editor writes.
+* text=auto eol=lf
+
+# Windows-only scripts must keep CRLF to run correctly
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files: never normalize, never diff as text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+*.pdf binary
+*.zip binary
+*.pfx binary
+*.snk binary
+*.dll binary
+*.exe binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
