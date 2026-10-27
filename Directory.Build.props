@@ -1,0 +1,36 @@
+<Project>
+
+  <!--
+    Shared build settings for every project under this repository (src/, services/, tests/, tools/).
+    MSBuild imports this file automatically. A project's own .csproj only states what differs.
+    See docs/Rules/GeneralRules.md §6 and §13, docs/ARCHITECTURE.md TR-08.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <Authors>paultarce18</Authors>
+    <Product>Mercato</Product>
+  </PropertyGroup>
+
+  <!-- Code analysis: .NET analyzers at the latest recommended level, style rules from .editorconfig
+       enforced in the build, every warning fails the build. -->
+  <PropertyGroup>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Required for IDE0005 (unnecessary usings) to run in the build; CS1591 (missing XML comment)
+         is suppressed because public members are not required to carry XML documentation. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- Central Package Management: versions live in Directory.Packages.props. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+</Project>

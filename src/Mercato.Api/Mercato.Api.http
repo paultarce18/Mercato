@@ -1,0 +1,7 @@
+@Mercato.Api_HostAddress = http://localhost:5296
+
+# OpenAPI document (Development only)
+GET {{Mercato.Api_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###

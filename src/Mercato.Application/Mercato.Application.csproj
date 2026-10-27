@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mercato.Contracts\Mercato.Contracts.csproj" />
+    <ProjectReference Include="..\Mercato.Domain\Mercato.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

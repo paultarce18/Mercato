@@ -233,6 +233,7 @@ dotnet_naming_rule.local_functions_pascal.severity = warning
 # Directory.Build.props so a warning here fails the build)
 # ---------------------------------------------------------------------------
 dotnet_analyzer_diagnostic.category-Style.severity = warning
+dotnet_diagnostic.IDE0058.severity = none      # expression value never used: ASP.NET/host builder APIs are fluent and return themselves on every call
 dotnet_diagnostic.CA1062.severity = none       # validate args of public methods: handled via EXC-01 guards, too noisy with nullable enabled
 dotnet_diagnostic.CA1848.severity = none       # LoggerMessage delegates: not required for this project size
 dotnet_diagnostic.CA2007.severity = warning    # ConfigureAwait(false) in library code (GeneralRules §6 Async)

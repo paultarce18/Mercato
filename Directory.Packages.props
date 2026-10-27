@@ -1,0 +1,14 @@
+<Project>
+
+  <!--
+    Central Package Management: the single place where NuGet package versions are declared.
+    Project files reference packages without a Version attribute.
+    Keep the list alphabetical; add a package here first, then reference it in the project.
+  -->
+
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Mercato.Api/Mercato.Api.csproj" Id="9bcd0354-ccfc-45c6-8e3c-705290369135" />
+    <Project Path="src/Mercato.Application/Mercato.Application.csproj" Id="d200934a-ae62-4958-b8bd-bae709b7d63e" />
+    <Project Path="src/Mercato.Contracts/Mercato.Contracts.csproj" Id="ee60d802-0a60-45d6-99df-23180d7caded" />
+    <Project Path="src/Mercato.Domain/Mercato.Domain.csproj" Id="625f137e-b570-4f36-9dc1-7773ff695a8c" />
+    <Project Path="src/Mercato.Infrastructure/Mercato.Infrastructure.csproj" Id="1e020184-460f-4f6b-861c-ae2c0a5d28a7" />
+    <Project Path="src/Mercato.Worker/Mercato.Worker.csproj" Id="e9db4a57-faf1-4370-aaf2-87c7037854b4" />
+  </Folder>
+</Solution>
