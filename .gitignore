@@ -17,10 +17,12 @@ x86/
 *.userosscache
 *.sln.docstates
 *.userprefs
-.vscode/
+.vscode/*
 !.vscode/settings.json
 !.vscode/launch.json
+!.vscode/tasks.json
 !.vscode/extensions.json
+.vscode/mcp.json
 *.swp
 
 # Build / test results

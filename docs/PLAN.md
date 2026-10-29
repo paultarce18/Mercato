@@ -2,7 +2,7 @@
 
 > Online marketplace with multi-vendor order fulfillment.
 > Modular monolith core + extracted microservices. Portfolio / learning project.
-> Last updated: 2026-10-27
+> Last updated: 2026-10-29
 
 ## 1. Goal
 
@@ -99,9 +99,10 @@ xUnit, Shouldly, NSubstitute, `WebApplicationFactory` + Testcontainers, architec
 
 ```
 C:\MERCATO Repo\
-├─ Mercato.sln, Directory.Build.props, Directory.Packages.props, .editorconfig, .gitignore
+├─ Mercato.slnx, global.json, Directory.Build.props, Directory.Packages.props, .editorconfig, .gitignore
 ├─ CLAUDE.md, README.md
-├─ docs/            PLAN.md, DECISIONS.md
+├─ docs/            PLAN.md, DECISIONS.md, REQUIREMENTS.md (final), REQUIREMENTS-V1.md (build target),
+│                   ARCHITECTURE.md, Rules/
 ├─ src/             Mercato.Contracts, Mercato.Gateway, Mercato.Domain, Mercato.Application,
 │                   Mercato.Infrastructure, Mercato.Api, Mercato.Worker
 ├─ services/        Mercato.Payments, Mercato.Shipping, Mercato.Notifications
@@ -121,7 +122,7 @@ Phases 1–7 build the monolith; 8–9 extract the services afterwards, delibera
 
 | # | Phase | End state | Status | Chat / notes |
 |---|-------|-----------|--------|--------------|
-| 1 | Setup & solution structure | Solution with core projects, shared build props, Git repo on GitHub, Angular skeleton | | |
+| 1 | Setup & solution structure | Solution with core projects, shared build props, Git repo on GitHub, Angular skeleton | Done 2026-10-29 (test projects deferred to Phase 11) | Phase 1 chat; DECISIONS.md phase log |
 | 2 | Domain model & database | Aggregates, EF Core, SQL Server in Docker, first migration, seed data, SSMS connected | | |
 | 3 | API core | CQRS handlers, validation, versioning, OpenAPI UI, middleware, ProblemDetails, logging | | |
 | 4 | Auth v1 (Identity + JWT) | Identity, JWT + refresh tokens, roles & policies, vendor tenancy rules | | |
@@ -131,7 +132,7 @@ Phases 1–7 build the monolith; 8–9 extract the services afterwards, delibera
 | 8 | Events, saga & Payments service | Kafka, outbox, Worker saga, first extracted service, Simulator | | |
 | 9 | Gateway, Shipping & Notifications services | YARP, two more services, contracts versioning, service-to-service auth | | |
 | 10 | Observability & cross-cutting | OpenTelemetry across services, Redis caching, health checks, resilience | | |
-| 11 | Testing | Unit, integration with Testcontainers, architecture tests | | |
+| 11 | Testing | Unit, integration with Testcontainers, architecture tests (test projects created here) | | |
 | 12 | CI/CD | GitHub Actions per service, PR gate, images to GHCR; Azure Pipelines + Boards on the same repo | | |
 | 13 | Kubernetes | Helm chart, local cluster, Worker scaled to 2 to show the lock | | |
 | 14 | Azure deployment | Bicep, Container Apps, Azure SQL, Static Web Apps, public URL | | |
