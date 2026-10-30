@@ -177,3 +177,59 @@ objects and carry no `Id`.
 | Aggregate root | Entity that guards a group of related entities and records domain events (`AggregateRoot`). |
 | Value object | Data without identity, compared by value, immutable (`Money`, implemented as a `record`). |
 | Domain event | Something that happened inside an aggregate, raised with `Raise(...)`, dispatched after save. |
+
+---
+
+## 3. What a `public sealed record` is (Phase 2)
+
+**Question:** `public sealed record` classes are new to me. What are they and why are they used?
+
+**Short answer:** a `record` is a class for which the compiler generates *value-based* equality, a
+readable `ToString()` and copy-with-changes (`with`). `sealed` (nothing can inherit from it) and
+`public` are independent keywords and mean what they always mean.
+
+### 3.1 Equality by values
+
+```csharp
+class  MoneyClass  { decimal Amount; string Currency; }
+record MoneyRecord { decimal Amount; string Currency; }
+
+new MoneyClass(10, "EUR")  == new MoneyClass(10, "EUR")   // false: two different objects
+new MoneyRecord(10, "EUR") == new MoneyRecord(10, "EUR")  // true: same values
+```
+
+A class compares *which object* it is; a record compares *what it contains*. That is right for
+things where two with the same content are interchangeable (an amount, an address, an event) and
+wrong for things with identity (two products with the same name are still two products, which is
+why `Entity` overrides `Equals` to compare ids).
+
+### 3.2 The one-line (positional) form
+
+```csharp
+public sealed record OrderPaid(Guid OrderId) : DomainEvent;
+```
+
+is shorthand for a record with a constructor taking `orderId`, a read-only property `OrderId`,
+inheriting from the `DomainEvent` record, and no body. Create it with `new OrderPaid(order.Id)`,
+read it with `evt.OrderId`.
+
+### 3.3 Records with a body
+
+`Money` and `ShippingAddress` are records written the long way: a normal constructor that
+validates, get-only properties. They get value equality and still enforce their rules, and since
+the values cannot change afterwards there is never a half-valid instance.
+
+### 3.4 Rule of thumb
+
+- No identity and never changes (value object, event, small data carrier such as `OrderLine`):
+  **record**. Less code, no accidental mutation, correct equality.
+- Has identity and a lifecycle (`Entity`, `AggregateRoot`): **class**.
+
+### 3.5 Vocabulary
+
+| Term | Meaning here |
+|---|---|
+| `record` | Class with generated value equality, `ToString()` and `with`. |
+| Positional record | One-line form `record Name(Type Property, ...)` that generates constructor and properties. |
+| `sealed` | Nothing can inherit from the type; the default for concrete classes in this code base. |
+| `init` | Property that can be set only while the object is being created. |

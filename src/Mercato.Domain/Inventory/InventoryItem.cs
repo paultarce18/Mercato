@@ -54,7 +54,7 @@ public sealed class InventoryItem : AggregateRoot
     public static InventoryItem Create(Guid productId, Guid vendorId, int onHand)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(onHand);
-        return new InventoryItem(NewId(), ValidateReference(productId, nameof(productId)), ValidateReference(vendorId, nameof(vendorId)), onHand);
+        return new InventoryItem(NewId(), Guard.NotEmpty(productId, nameof(productId)), Guard.NotEmpty(vendorId, nameof(vendorId)), onHand);
     }
 
     /// <summary>Units that another cart could still hold right now.</summary>
@@ -82,7 +82,7 @@ public sealed class InventoryItem : AggregateRoot
     /// <exception cref="InsufficientStockException">Not enough stock is available; nothing changes.</exception>
     public void Hold(Guid cartId, int quantity, DateTimeOffset now)
     {
-        ValidateReference(cartId, nameof(cartId));
+        Guard.NotEmpty(cartId, nameof(cartId));
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(quantity);
 
         int available = OnHand - Reserved - HeldAt(now, excludingCartId: cartId);
@@ -131,11 +131,6 @@ public sealed class InventoryItem : AggregateRoot
 
         Reserved -= quantity;
     }
-
-    private static Guid ValidateReference(Guid id, string parameterName) =>
-        id == Guid.Empty
-            ? throw new ArgumentException("A reference id must not be empty.", parameterName)
-            : id;
 
     private int HeldAt(DateTimeOffset now, Guid? excludingCartId) =>
         holds

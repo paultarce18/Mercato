@@ -75,8 +75,8 @@ public sealed class Product : AggregateRoot
     {
         return new Product(
             NewId(),
-            ValidateReference(vendorId, nameof(vendorId)),
-            ValidateReference(categoryId, nameof(categoryId)),
+            Guard.NotEmpty(vendorId, nameof(vendorId)),
+            Guard.NotEmpty(categoryId, nameof(categoryId)),
             ValidateName(name),
             ValidateDescription(description),
             ValidateSku(sku),
@@ -87,7 +87,7 @@ public sealed class Product : AggregateRoot
     /// <summary>Changes the descriptive data. Vendor and SKU are fixed once the product exists.</summary>
     public void Update(Guid categoryId, string name, string description, string? imageUrl)
     {
-        CategoryId = ValidateReference(categoryId, nameof(categoryId));
+        CategoryId = Guard.NotEmpty(categoryId, nameof(categoryId));
         Name = ValidateName(name);
         Description = ValidateDescription(description);
         ImageUrl = ValidateImageUrl(imageUrl);
@@ -102,11 +102,6 @@ public sealed class Product : AggregateRoot
     public void Activate() => IsActive = true;
 
     public void Deactivate() => IsActive = false;
-
-    private static Guid ValidateReference(Guid id, string parameterName) =>
-        id == Guid.Empty
-            ? throw new ArgumentException("A reference id must not be empty.", parameterName)
-            : id;
 
     private static string ValidateName(string name)
     {
