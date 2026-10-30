@@ -119,3 +119,61 @@ the rules are. Those are the items in `ARCHITECTURE.md` marked as proposals to c
 | Adapter | The Infrastructure implementation of a port (EF Core repository, system clock). |
 | Composition root | The entry-point project that wires ports to adapters (DI) — `Mercato.Api`, `Mercato.Worker`. |
 | Contract | A message or DTO shape shared between processes (`Mercato.Contracts`). |
+
+---
+
+## 2. Where Entity, AggregateRoot and Money come from (Phase 2)
+
+**Question:** I would never have come up with base classes like `Entity` and `AggregateRoot`.
+How does one arrive at them, and how can I learn to do it? Why does everything have an `Id`?
+
+**Short answer:** nobody invents them from first principles. They are **extracted** from
+duplication, the way any base class is, and then named by the industry (Evans, *DDD*, 2003;
+Vernon, *Implementing DDD*, 2013). Seeing the finished classes without the problem that
+produced them is what makes them feel abstract.
+
+### 2.1 The three rounds that produce the classes
+
+1. **Plain classes.** `Vendor`, `Category`, `Product` each get their own `Id`, an
+   empty-id check and a factory that generates a Guid. By the third class the duplication is
+   obvious (K-08: extract on the third occurrence). The extracted part is `Entity`.
+2. **Equality.** Two `Product` objects loaded separately from the DB are not `==` although
+   they are the same row; `HashSet` and `Contains` misbehave. The fix, compare by type + id,
+   is needed by every entity, so it moves into `Entity`.
+3. **Events.** `cart.Checkout()` must lead to a payment and a notification, but the handler
+   may not call four modules (TR-12). Instead the aggregate *records* "OrderPlaced happened"
+   and others react after saving. The recorded list is `AggregateRoot`. Only aggregate roots
+   announce things (an `OrderItem` never does), so it is a second class, not part of `Entity`.
+
+`Money` follows the same path: `decimal Price`, `decimal UnitPrice`, `decimal Total` all need
+the same rules (non-negative, two decimals, never add EUR to USD), so one type owns them.
+
+### 2.2 Why everything has an Id
+
+The business reason comes first: two things must be distinguishable even when their values
+look the same (two vendors named "Müller"), and a thing stays *the same thing* when its
+values change (a product after a price change). That is what "entity" means: identity outlives
+values. The database primary key, `Equals` and references across modules (`Product.VendorId`)
+are consequences of that. Things without identity (a `Money` amount, an address) are value
+objects and carry no `Id`.
+
+### 2.3 How to learn this
+
+- **Write the naive version first.** When something feels repetitive or awkward, that is the
+  signal; the pattern is only the name of the fix.
+- **Ask "what would I lose if I deleted this class?"** Without `Entity`: `Id` and `Equals`
+  copied into every class. Without `AggregateRoot`: no way to announce events without calling
+  other modules. If no concrete loss can be named, the class should not exist (K-02).
+- **Read one source:** Khononov, *Learning Domain-Driven Design*, ch. 6 ("Tackling Complex
+  Business Logic"), after having touched `Vendor`.
+- Most of the difficulty of this project is business logic (where stock holds live, what
+  happens when a hold expires mid-checkout), not these ~150 lines of infrastructure.
+
+### 2.4 Vocabulary
+
+| Term | Meaning here |
+|---|---|
+| Entity | Object with identity that outlives its values; base class `Entity` provides `Id` and equality. |
+| Aggregate root | Entity that guards a group of related entities and records domain events (`AggregateRoot`). |
+| Value object | Data without identity, compared by value, immutable (`Money`, implemented as a `record`). |
+| Domain event | Something that happened inside an aggregate, raised with `Raise(...)`, dispatched after save. |

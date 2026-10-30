@@ -204,6 +204,31 @@ Conventions:
 | TR-14 | Aggregates per module: Identity → `User`; Catalog → `Vendor`, `Product` (with `Review`), `Category`; Inventory → `InventoryItem` (with `StockHold`); Ordering → `Cart`, `Order` (with `VendorOrder`, `OrderItem`), `Return`; Payments → `Payment`; Shipping → `Shipment`; Notifications → `Notification`. Refined in Phase 2. | |
 | TR-15 | Every vendor-owned aggregate carries `VendorId`; tenancy is enforced by an application behaviour/global query filter, never left to the UI (`REQUIREMENTS.md` BR-02). | |
 
+### 5.1 V1 aggregate catalogue (Phase 2)
+
+Refinement of TR-14, derived from `REQUIREMENTS-V1.md` (nouns → entities, rules → methods; see
+`LearningProcess.md` §1.3). Cross-module references are ids only (TR-12): `Product.VendorId` is
+a `Guid`, never a `Vendor` property. `User` is deferred to Phase 4 (ASP.NET Core Identity owns
+it); until then `CustomerId` / `UserId` are plain `Guid`s.
+
+| Module / schema | Aggregate root | Inside the aggregate | Key data | Rules it owns |
+|---|---|---|---|---|
+| `catalog` | **Vendor** | – | Name, ContactEmail, IsActive | BR-12: deactivate, never delete |
+| `catalog` | **Category** | – | Name, IsActive | FR-CT-06: flat list |
+| `catalog` | **Product** | – | VendorId, CategoryId, Name, Description, Sku, Price (`Money`), ImageUrl, IsActive | FR-CT-02; SKU unique per vendor; BR-12 |
+| `inventory` | **InventoryItem** | `StockHold` (CartId, Quantity, ExpiresAt) | ProductId, VendorId, OnHand, Reserved, RowVersion | FR-IN-06: `Available = OnHand − Reserved − active holds ≥ 0`; BR-05/06: `Hold()`, `ReleaseExpired(now)`, `ConvertHoldToReservation()`, `Ship()` decrements stock |
+| `ordering` | **Cart** | `CartItem` (ProductId, VendorId, Quantity, HoldId?) | CustomerId, Status | FR-CA-01: one active cart per customer; FR-CA-04: expired item flagged |
+| `ordering` | **Order** | `VendorOrder` (VendorId, Status, Subtotal) → `OrderItem` (ProductId, name and unit price snapshot, Quantity) | CustomerId, OrderNumber, Status, ShippingAddress (value object), Total | FR-OR-03: split per vendor at creation; BR-04: prices frozen; FR-OR-07: state machine `Placed → Paid / Rejected`, `Pending → Shipped → Delivered`, `Completed` when all delivered |
+| `payments` | **Payment** | – | OrderId, Amount, Status (Pending / Succeeded / Declined), ProviderReference | FR-PA-01/04 |
+| `shipping` | **Shipment** | – | VendorOrderId, TrackingNumber, Status (Created / Delivered) | FR-SH-02/03 |
+| `notifications` | **Notification** | – | UserId, Type, Message, CreatedAt | FR-NO-01 |
+
+Shared building blocks in `Mercato.Domain/Common`: `Entity` (Guid v7 id, equality by type + id),
+`AggregateRoot` (domain-event list), `DomainEvent` (abstract record), `Money` (amount + currency,
+a `record` — value equality comes from the record, so no separate `ValueObject` base class),
+`MercatoException` (base of domain exceptions). The §5 tree is the plan; these are the files
+as built.
+
 ---
 
 ## 6. Request flow (synchronous)
