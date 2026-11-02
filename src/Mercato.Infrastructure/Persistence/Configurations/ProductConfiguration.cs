@@ -27,24 +27,28 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         // Money is a value object with no identity and no table of its own. "Owned" means its two
         // values (amount, currency) are stored as columns of the Products table (TR-44).
-        builder.OwnsOne(
-            product => product.Price,
-            price =>
-            {
-                price.Property(money => money.Amount)
-                    .HasColumnName("PriceAmount")
-                    .HasColumnType("decimal(18,2)")
-                    .IsRequired();
+        //builder.OwnsOne(
+        //    product => product.Price,
+        //    price =>
+        //    {
+        //        price.Property(money => money.Amount)
+        //            .HasColumnName("PriceAmount")
+        //            .HasColumnType("decimal(18,2)")
+        //            .IsRequired();
 
-                price.Property(money => money.Currency)
-                    .HasColumnName("PriceCurrency")
-                    .HasMaxLength(3)
-                    .IsFixedLength()
-                    .IsRequired();
-            });
+        //        price.Property(money => money.Currency)
+        //            .HasColumnName("PriceCurrency")
+        //            .HasMaxLength(3)
+        //            .IsFixedLength()
+        //            .IsRequired();
+        //    });
+        // Columns PriceAmount and PriceCurrency: Money has no table of its own, see OwnsMoney (TR-44).
+
+        builder.OwnsMoney(product => product.Price, "Price");
 
         // Every product must have a price, so the two columns above must be NOT NULL.
-        builder.Navigation(product => product.Price).IsRequired();
+        //Delete the old line builder.Navigation(product => product.Price).IsRequired(); and the comment above it (“Every product must have a price…”). OwnsMoney already does that, so the line is redundant. It’s harmless but confusing.
+        //builder.Navigation(product => product.Price).IsRequired();
 
         // A SKU is unique per vendor, not globally (see the remark on Product.Sku).
         builder.HasIndex(product => new { product.VendorId, product.Sku }).IsUnique();
