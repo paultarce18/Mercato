@@ -1,0 +1,21 @@
+# Local infrastructure for development. Phase 2 needs only SQL Server;
+# Kafka, Redis and Seq are added here in Phase 6.
+name: mercato
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mercato-sqlserver
+    environment:
+      # Required by Microsoft: accepts the SQL Server license terms.
+      ACCEPT_EULA: "Y"
+      # Read from deploy/compose/.env (not committed); compose stops with a message if it is missing.
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in deploy/compose/.env}
+    ports:
+      - "1433:1433"
+    volumes:
+      # Keeps the databases when the container is stopped or re-created.
+      - sqlserver-data:/var/opt/mssql
+
+volumes:
+  sqlserver-data:
