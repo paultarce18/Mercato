@@ -622,3 +622,93 @@ taken at order time.
 | Alias | Short name for a table in a query (`catalog.Products p`). |
 | CTE | `WITH name AS (...)`: a named result usable like a table within one statement. |
 | View | A stored query that can be selected from like a table. |
+
+---
+
+## 7. DTOs and repositories (Phase 3 topic, asked during Phase 2)
+
+**Question:** Shouldn't the project have DTOs and repositories? What are they, and do we need
+them?
+
+**Short answer:** yes, both, and both are already planned in `ARCHITECTURE.md` (TR-02, TR-03,
+TR-13, TR-20). They belong to **Phase 3** (Application layer and API). Phase 2 only builds the
+domain and the database, so neither exists yet. The Phase 3 handlers will show which repository
+methods and which DTO shapes are actually needed (§1.3).
+
+### 7.1 DTO (Data Transfer Object)
+
+A plain data shape whose only job is to cross a boundary: no behaviour, usually a `record`.
+
+```csharp
+public sealed record ProductDto(Guid Id, string Name, decimal Price, string Currency, bool IsActive);
+```
+
+Domain classes are never sent out through the API:
+
+- **Leaking internals:** `Product` has private setters, methods and `DomainEvents`; `Order` →
+  `VendorOrder` → ... can form loops when serialised.
+- **Coupling the API to the database:** renaming a domain property would break every client. A
+  DTO is a promise to the client and changes only on purpose (GeneralRules, "interfaces as
+  contracts").
+- **Over-posting:** if a client could post a `Product`, it could set `IsActive` or `VendorId`.
+- **Reads need less than an aggregate:** a product list needs name, price and image. EF fills a
+  DTO straight from SQL with `.Select(p => new ProductDto(...))` (TR-20: queries may bypass the
+  domain).
+
+Where they live:
+
+| Kind | Project / folder |
+|---|---|
+| Request and response shapes of the API | `Mercato.Api` (next to the endpoints) |
+| Query results | `Mercato.Application/<Module>/<UseCase>/` (e.g. `GetProductById/ProductDto.cs`) |
+| Shapes shared between processes (integration events) | `Mercato.Contracts` (TR-02) |
+
+### 7.2 Repository
+
+A collection-like object that loads and saves one kind of aggregate, so the use case never sees
+SQL or EF Core.
+
+```csharp
+// Port: declared in Mercato.Application
+public interface IProductRepository
+{
+    Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    void Add(Product product);
+}
+```
+
+The implementation (the adapter) lives in `Mercato.Infrastructure/Persistence/Repositories/` and
+uses `MercatoDbContext`. A handler loads the aggregate through the repository, calls its domain
+methods, and the unit of work saves. The handler does not know whether the database is SQL Server
+or a fake in a test.
+
+Rules from the architecture:
+
+- **One repository per aggregate root (TR-13):** `ICartRepository` exists, `ICartItemRepository`
+  does not, for the same reason `CartItem` has no `DbSet`.
+- **The interface belongs to Application (TR-03):** Application must not depend on EF Core, so it
+  declares what it needs and Infrastructure implements it.
+- **It returns the whole aggregate:** "get cart" loads the cart with its items (`Include`), ready
+  for the domain rules. This is why the child-collection mappings of Phase 2 matter.
+
+Honest trade-off: `DbContext` already is a repository plus a unit of work, and many teams skip
+the extra layer. Mercato keeps the ports so that Application stays free of EF Core and handler
+tests need no database. GeneralRules K-04 (no indirection without a reason) applies: repositories
+stay thin, with only the methods a handler really calls.
+
+### 7.3 Reads do not need repositories
+
+Queries (TR-20) can project directly from the `DbContext` into DTOs. Repositories are for the
+**write side**, where the aggregate and its rules are needed.
+
+### 7.4 Vocabulary
+
+| Term | Meaning here |
+|---|---|
+| DTO | Behaviour-free data shape that crosses a boundary (API, message). |
+| Port | Interface declared by Application for something it needs (`IProductRepository`). |
+| Adapter | Infrastructure class that implements a port (EF Core repository). |
+| Repository | Loads and saves whole aggregates of one root type; one per aggregate root. |
+| Unit of work | Saves all changes of a use case in one transaction (`IUnitOfWork`, `SaveChangesAsync`). |
+| Over-posting | A client sets fields it should not by sending more data than the endpoint expects. |

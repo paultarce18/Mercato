@@ -1,6 +1,6 @@
 using Mercato.Domain.Common;
 
-namespace Mercato.Domain.Ordering;
+namespace Mercato.Domain.Ordering.Exceptions;
 
 /// <summary>
 /// A cart that has already been checked out was changed or checked out again, for example by a

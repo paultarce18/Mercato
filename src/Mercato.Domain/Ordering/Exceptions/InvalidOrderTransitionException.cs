@@ -1,6 +1,6 @@
 using Mercato.Domain.Common;
 
-namespace Mercato.Domain.Ordering;
+namespace Mercato.Domain.Ordering.Exceptions;
 
 /// <summary>
 /// A status change that the order lifecycle does not allow (FR-OR-07), for example shipping an

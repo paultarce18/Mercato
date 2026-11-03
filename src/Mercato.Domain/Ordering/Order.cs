@@ -1,5 +1,7 @@
 using Mercato.Domain.Common;
+using Mercato.Domain.Ordering.Enums;
 using Mercato.Domain.Ordering.Events;
+using Mercato.Domain.Ordering.Exceptions;
 
 namespace Mercato.Domain.Ordering;
 

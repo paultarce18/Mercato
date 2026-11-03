@@ -1,4 +1,4 @@
-namespace Mercato.Domain.Ordering;
+namespace Mercato.Domain.Ordering.Enums;
 
 /// <summary>V1 order lifecycle (REQUIREMENTS-V1 §5).</summary>
 public enum OrderStatus

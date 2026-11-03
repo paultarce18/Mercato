@@ -1,6 +1,6 @@
 # Temporary To-Do
 
-## Where we stopped (Phase 2, step 2: EF Core persistence)
+## Where we stopped (Phase 2, step 2 done; next: step 3, SQL Server in Docker)
 
 The user writes the EF Core code in Visual Studio; Claude explains the concept and reviews (no files
 are written into the repo without the user saying "write"). Code given to the user carries
@@ -9,15 +9,15 @@ explaining comments in the style of the Domain classes.
 - [x] A - `MercatoDbContext` (nine `DbSet`s, `OnModelCreating`, `ApplyConfigurationsFromAssembly`)
 - [x] B - `VendorConfiguration`
 - [x] C - `CategoryConfiguration`, `ProductConfiguration` (`Money` as owned type, unique `(VendorId, Sku)`)
-- [ ] D - `InventoryItem` (rowversion TR-43, `StockHold` as owned collection, unique `ProductId`)
-- [ ] E - `Cart` + `Order` (`ConfigureMoney` helper, `ShippingAddress` owned, backing-field collections, filtered unique index for one active cart per customer)
-- [ ] F - `Payment`, `Shipment`, `Notification`
-- [ ] G - check the generated SQL script (`GenerateCreateScript`) before the first migration
+- [x] D - `InventoryItemConfiguration`, `StockHoldConfiguration` (rowversion TR-43, `StockHold` as child entity, unique `ProductId`)
+- [x] E - `MoneyMappingExtensions` (`OwnsMoney`), `Cart`/`CartItem`, `Order`/`VendorOrder`/`OrderItem` (`ShippingAddress` owned, filtered unique index for one active cart per customer)
+- [x] F - `PaymentConfiguration`, `ShipmentConfiguration`, `NotificationConfiguration`
+- [x] G - generated SQL script checked (13 tables, matches `docs/DBArchitecture.md`); final check is in SSMS after the migration
 - [ ] Install the local tool in the repo root: `dotnet new tool-manifest`, then `dotnet tool install dotnet-ef --version 10.0.14`
 - [ ] Then Phase 2 steps 3-7: SQL Server in Docker, first migration, seed data, SSMS, closing
 
-Note: the full EF model only builds at runtime once D-F exist (`Order` references the unmapped
-`ShippingAddress` until then), so do not run the app or create a migration before F is done.
+Note: `ProductConfiguration` still contains the old `OwnsOne(...)` block as comments (kept on purpose by
+the user) and a now redundant `Navigation(...).IsRequired()` line; harmless, tidy up when convenient.
 
 ## Phase 2 closing checklist — do before the Phase 2 commit
 
@@ -38,9 +38,15 @@ the user when the last Phase 2 step (SSMS connected) is done.
   - EF mapping lives in `IEntityTypeConfiguration<T>` classes (Infrastructure), not attributes on domain classes
   - foreign keys only inside a module (Catalog: Product to Vendor/Category, `Restrict`); across modules ids only (TR-12)
   - `Money` stored as `PriceAmount decimal(18,2)` + `PriceCurrency nchar(3)` via `OwnsOne`
+  - `DateTimeOffset` kept and stored as `datetimeoffset` instead of `datetime2` (deviation from TR-44)
+  - shared `OwnsMoney` mapping helper for all `Money` properties (extracted on the 3rd use, K-08)
+  - enums stored as strings; child entities use shadow foreign keys and cascade delete
+  - V1 uniqueness: one `Payment` per order, one `Shipment` per vendor order (revisit for retries / partial shipments)
+  - DTOs and repositories are Phase 3 (Application layer); see `LearningProcess.md` section 7
   - plus the EF Core / SQL Server / migration decisions made in steps 2–5
 - [ ] `docs/DECISIONS.md` — fill the Phase 2 phase-log block (Status / Built / Decisions / Known issues / TODO / Next).
 - [ ] `docs/ARCHITECTURE.md` — §5.1 table: `Shipment` gets `VendorId`, `CartItem` gets `HoldExpiresAt`, `Cart` gets a status; §5 folder tree: replace `ValueObject.cs` / `IDomainEvent.cs` with `DomainEvent.cs`, `Money.cs`, `Guard.cs`, add the `Events` folders.
+- [ ] `docs/DBArchitecture.md` — after the migration and SSMS check: compare with the real schema, update status line and open points.
 - [ ] `docs/LearningProcess.md` — add sections for any further explanations asked for.
-- [ ] Refresh the Claude project knowledge copies (ARCHITECTURE, DECISIONS, PLAN, LearningProcess, CLAUDE).
+- [ ] Refresh the Claude project knowledge copies (ARCHITECTURE, DBArchitecture, DECISIONS, PLAN, LearningProcess, CLAUDE).
 - [ ] Decide whether `docs/ToDoTemp.md` stays tracked; empty it once this list is done.

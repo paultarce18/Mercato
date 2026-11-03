@@ -5,7 +5,7 @@
 > projects, modules, dependencies, data flow, data ownership and cross-cutting concerns.
 > Diagrams are Mermaid (rendered by GitHub and VS Code).
 > Status: **draft v0.1** (Phase 1). Updated whenever a phase changes the structure.
-> Last updated: 2026-10-27
+> Last updated: 2026-11-03
 
 Technical requirement IDs: `TR-<nn>`. Architecture tests (Phase 11) enforce the ones marked ⚙.
 
@@ -228,6 +228,191 @@ Shared building blocks in `Mercato.Domain/Common`: `Entity` (Guid v7 id, equalit
 a `record` — value equality comes from the record, so no separate `ValueObject` base class),
 `MercatoException` (base of domain exceptions). The §5 tree is the plan; these are the files
 as built.
+
+### 5.2 Worked example: one order through every table
+
+One purchase followed end to end: which method runs at each step and which rows it writes.
+
+Reading notes:
+- Ids are readable placeholders; real ids are Guid v7 (TR-45).
+- Only the relevant columns are shown. `Money` is stored as two columns, `…Amount` and
+  `…Currency` (TR-44); here it is shown as one EUR value.
+- Payments and Shipping tables are shown in the monolith until they are extracted
+  (Phase 8–9, §8).
+- In V1 an Application handler coordinates the steps. From Phase 8 the Worker saga drives
+  steps 3–6 through events (§7).
+
+**Cast:** customer Ana; vendors TechShop and BookWorld; three products.
+
+#### Step 0 — Starting data (Admin creates vendors, vendors create products and set stock)
+
+```
+catalog.Vendors                 catalog.Products (CategoryId omitted)
+Id        | IsActive            Id    | VendorId  | Name        | Sku     | Price | IsActive
+TechShop  | 1                   mouse | TechShop  | MX Master 3 | MX-3    | 40.00 | 1
+BookWorld | 1                   hub   | TechShop  | USB-C hub   | HUB-C   | 25.00 | 1
+                                book  | BookWorld | Clean Code  | CC-2008 | 35.00 | 1
+
+inventory.InventoryItems
+Id    | ProductId | VendorId  | OnHand | Reserved
+inv-m | mouse     | TechShop  | 10     | 0
+inv-h | hub       | TechShop  | 5      | 0
+inv-b | book      | BookWorld | 3      | 0
+```
+
+#### Step 1 — Ana fills her cart (10:00–10:05)
+
+Each "add to cart" is its own request and transaction:
+1. `inventoryItem.Hold(cartId, quantity, now)`. This throws `InsufficientStockException` when
+   not enough is available.
+2. `cart.SetItem(productId, vendorId, name, price, quantity, holdExpiresAt)`. The hold expires
+   15 minutes after it was placed.
+
+```
+ordering.Carts                  ordering.CartItems
+Id     | CustomerId | Status    Id  | CartId (FK) | ProductId | VendorId  | ProductName | UnitPrice | Quantity | HoldExpiresAt
+cart-1 | Ana        | Active    ci1 | cart-1      | mouse     | TechShop  | MX Master 3 | 40.00     | 1        | 10:15
+                                ci2 | cart-1      | hub       | TechShop  | USB-C hub   | 25.00     | 2        | 10:16
+                                ci3 | cart-1      | book      | BookWorld | Clean Code  | 35.00     | 1        | 10:20
+
+inventory.StockHolds
+Id | InventoryItemId (FK) | CartId | Quantity | ExpiresAt
+h1 | inv-m                | cart-1 | 1        | 10:15
+h2 | inv-h                | cart-1 | 2        | 10:16
+h3 | inv-b                | cart-1 | 1        | 10:20
+```
+
+`InventoryItems` rows do not change: `Reserved` counts placed orders only, and held units are
+calculated from the active holds. For the hub, `Available = OnHand − Reserved − held = 5 − 0 − 2 = 3`.
+`CartItems` copies the name and price because Ordering does not read Catalog (TR-12).
+
+#### Step 2 — Checkout (10:10)
+
+The handler loads `cart-1` and the three `InventoryItem`s, then:
+1. `cart.Checkout(orderNumber, address, now)` checks that the cart is not empty and that no hold
+   has expired. It turns the items into `OrderLine`s and calls `Order.Place`.
+2. `Order.Place` groups the lines by `VendorId`, creating one `VendorOrder` per vendor. It
+   computes `Total` and raises `OrderPlaced`.
+3. `inventoryItem.ConvertHoldToReservation(cart-1, now)` runs for each item.
+
+A single `SaveChanges` writes all of the following in one transaction:
+
+```
+ordering.Orders
+Id   | OrderNumber | CustomerId | Status | Total  | ShippingCity | PlacedAt
+1001 | MER-1001    | Ana        | Placed | 125.00 | Bucharest    | 10:10
+
+ordering.VendorOrders                       ordering.OrderItems
+Id | OrderId (FK) | VendorId  | Status      Id | VendorOrderId (FK) | ProductId | ProductName | UnitPrice | Quantity
+A  | 1001         | TechShop  | Pending     i1 | A                  | mouse     | MX Master 3 | 40.00     | 1
+B  | 1001         | BookWorld | Pending     i2 | A                  | hub       | USB-C hub   | 25.00     | 2
+                                            i3 | B                  | book      | Clean Code  | 35.00     | 1
+
+ordering.Carts: cart-1 Active → CheckedOut   (CartItems kept; Ana's next cart is a new row)
+
+inventory.StockHolds: h1, h2, h3 deleted      inventory.InventoryItems
+                                              Id    | OnHand | Reserved
+                                              inv-m | 10     | 1
+                                              inv-h | 5      | 2
+                                              inv-b | 3      | 1
+```
+
+`Total` = TechShop subtotal 90.00 (40 + 2 × 25) + BookWorld subtotal 35.00 = 125.00.
+Subtotals are calculated in code and have no column. Name and price are now frozen in
+`OrderItems` (BR-04): a later price change on the product does not affect this order.
+
+#### Step 3 — Payment (10:10–10:11)
+
+`Payment.Create(1001, 125.00, now)` creates a pending payment. When the provider's webhook
+arrives, `payment.MarkSucceeded("psp_7f3a")` raises `PaymentSucceeded`. The handler then calls
+`order.MarkPaid()`, which raises `OrderPaid`.
+
+```
+payments.Payments
+Id  | OrderId | Amount | Status    | ProviderReference
+P-1 | 1001    | 125.00 | Pending   | NULL          ← 10:10, inserted
+P-1 | 1001    | 125.00 | Succeeded | psp_7f3a      ← 10:11, same row updated
+
+ordering.Orders: 1001  Placed → Paid
+```
+
+The customer pays once, for the whole order, not once per vendor.
+
+#### Step 4 — Vendors ship, each its own part (Monday, Tuesday)
+
+TechShop's order list is `VendorOrders WHERE VendorId = TechShop`, so it sees only `A`, never
+Ana's book (tenancy, BR-02). Marking `A` shipped:
+1. `order.MarkVendorOrderShipped(A)` is allowed only when the order is `Paid`. It raises
+   `VendorOrderShipped`.
+2. `Shipment.Create(A, TechShop, "TRK-111", now)` creates the shipment.
+3. On the inventory side, `inv-m.Ship(1)` and `inv-h.Ship(2)` run: the units leave the
+   warehouse.
+
+On Tuesday, BookWorld does the same for `B`.
+
+```
+ordering.VendorOrders                shipping.Shipments
+Id | Status                          Id  | VendorOrderId | VendorId  | TrackingNumber | Status  | ShippedAt
+A  | Pending → Shipped   (Mon)       S-1 | A             | TechShop  | TRK-111        | Created | Mon
+B  | Pending → Shipped   (Tue)       S-2 | B             | BookWorld | TRK-222        | Created | Tue
+
+inventory.InventoryItems
+Id    | OnHand | Reserved
+inv-m | 9      | 0
+inv-h | 3      | 0
+inv-b | 2      | 0
+```
+
+#### Step 5 — Deliveries (Wednesday, Friday)
+
+On Wednesday the courier reports S-1 delivered:
+1. `shipment.MarkDelivered(now)` raises `ShipmentDelivered(S-1, A)`.
+2. `order.MarkVendorOrderDelivered(A)` moves `A` to `Delivered`.
+3. `B` is not delivered yet, so the order stays `Paid`.
+
+On Friday S-2 is delivered and `B` moves to `Delivered`. All vendor orders are now delivered,
+so the order becomes `Completed`.
+
+#### Step 6 — Final state
+
+```
+ordering.Orders        1001  Completed       payments.Payments    P-1  Succeeded
+ordering.VendorOrders  A Delivered, B Delivered
+shipping.Shipments     S-1 Delivered, S-2 Delivered
+inventory.InventoryItems  inv-m 9/0, inv-h 3/0, inv-b 2/0   (OnHand/Reserved)
+```
+
+Along the way, events such as `OrderPaid`, `VendorOrderShipped` and `ShipmentDelivered` are what
+notifications react to (rows in `Notifications`: UserId, Type, Message; FR-NO-01).
+
+#### Variations
+
+| What happens | Methods | Rows |
+|---|---|---|
+| Ana waits past 10:15 before checkout | Hold-expiry job: `inventoryItem.ReleaseExpiredHolds(now)`. Then `cart.Checkout` throws `CartItemHoldExpiredException` | `h1` deleted; `ci1` stays but `IsHoldExpiredAt(now)` is true; Ana must add the mouse again (FR-CA-04) |
+| Payment declined | `payment.MarkDeclined(reason)` → `order.Reject()` → `inventoryItem.ReleaseReservation(qty)` per item | `Payments.Status = Declined`, `FailureReason` set; `Orders.Status = Rejected`; `Reserved` back to 0; no `Shipment` is ever created |
+| Vendor changes the hub price to 30.00 after checkout | `product.ChangePrice(...)` | `Products` row changes; `OrderItems.i2` still says 25.00 (BR-04) |
+
+#### How the tables connect
+
+```
+Real foreign keys (same aggregate, cascade delete: children live and die with the root)
+  ordering.Carts           ◄── CartItems.CartId
+  ordering.Orders          ◄── VendorOrders.OrderId ◄── OrderItems.VendorOrderId
+  inventory.InventoryItems ◄── StockHolds.InventoryItemId
+
+Real foreign keys (same module, restrict: the parent cannot be deleted while used)
+  catalog.Vendors    ◄── Products.VendorId
+  catalog.Categories ◄── Products.CategoryId
+
+Ids only, no foreign key (other module, TR-12); kept consistent by the handlers and events
+  Carts.CustomerId, Orders.CustomerId                            → User      (Identity)
+  CartItems / OrderItems / InventoryItems .ProductId             → Product   (Catalog)
+  CartItems / VendorOrders / InventoryItems / Shipments .VendorId → Vendor    (Catalog)
+  StockHolds.CartId                                              → Cart      (Ordering)
+  Payments.OrderId                                               → Order     (Ordering)
+  Shipments.VendorOrderId                                        → VendorOrder (Ordering)
+```
 
 ---
 

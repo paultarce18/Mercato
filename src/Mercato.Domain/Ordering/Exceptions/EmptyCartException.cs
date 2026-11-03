@@ -1,6 +1,6 @@
 using Mercato.Domain.Common;
 
-namespace Mercato.Domain.Ordering;
+namespace Mercato.Domain.Ordering.Exceptions;
 
 /// <summary>Checkout was attempted on a cart without items. Mapped to HTTP 409.</summary>
 public sealed class EmptyCartException : MercatoException

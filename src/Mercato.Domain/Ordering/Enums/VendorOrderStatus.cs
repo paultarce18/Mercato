@@ -1,4 +1,4 @@
-namespace Mercato.Domain.Ordering;
+namespace Mercato.Domain.Ordering.Enums;
 
 public enum VendorOrderStatus
 {

@@ -1,6 +1,6 @@
 using Mercato.Domain.Common;
 
-namespace Mercato.Domain.Ordering;
+namespace Mercato.Domain.Ordering.Exceptions;
 
 /// <summary>The order has no vendor order with the given id. Mapped to HTTP 404.</summary>
 public sealed class VendorOrderNotFoundException : MercatoException
