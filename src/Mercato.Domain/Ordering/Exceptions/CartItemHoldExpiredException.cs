@@ -1,6 +1,6 @@
 using Mercato.Domain.Common;
 
-namespace Mercato.Domain.Ordering;
+namespace Mercato.Domain.Ordering.Exceptions;
 
 /// <summary>
 /// Checkout found an item whose stock hold has expired; the customer must add it again (BR-06).
