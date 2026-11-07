@@ -6,9 +6,10 @@
 > `src/Mercato.Infrastructure/Persistence/Configurations/` and, once created, the migrations.
 > This document explains them; if they disagree, the code wins and this file gets fixed.
 
-**Status (Phase 2):** all six schemas are mapped in code (Steps A–F). The complete EF Core model
-builds and produces the 13 tables below. The migration (Phase 2, step 4) has not been created yet, so
-nothing exists in a real database until it is.
+**Status (Phase 2, closed 2026-11-08):** all six schemas are mapped in code and the `InitialCreate`
+migration has been applied to SQL Server 2022 in Docker. Checked in SSMS: 6 schemas, 13 tables, 17
+indexes; every foreign key stays inside its module; `__EFMigrationsHistory` holds `InitialCreate`.
+The real schema matches the tables below.
 
 ---
 
@@ -338,9 +339,9 @@ domain cannot see, such as two requests at the same moment.
 
 ## 7. Open points
 
-- **Time type:** `datetimeoffset` is used instead of `datetime2` (TR-44). Decide and record as an ADR.
+- **Time type:** `datetimeoffset` is used instead of `datetime2` (TR-44). Decided, ADR-019.
 - **Payments and Shipments uniqueness:** one payment per order and one shipment per vendor order
-  (V1 choices, not yet confirmed as ADRs). Revisit if partial shipments or payment retries are needed.
+  (V1 choices, ADR-021). Revisit if partial shipments or payment retries are needed.
 - **Column naming for `Payments`:** `PaymentAmount`/`PaymentCurrency` come from the shared money
   mapping, which requires a prefix.
 

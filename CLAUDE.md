@@ -21,7 +21,7 @@ Do not start phase work, generate code, or answer design questions from chat mem
 
 ## Project status
 
-Mercato is an online marketplace with multi-vendor order fulfillment, built as a portfolio/learning project. **Phase 1 (setup & solution structure) is done; Phase 2 (domain model & database) is next.** The solution, six core projects and the Angular skeleton exist and build clean; no domain code yet. Test projects were deferred to Phase 11.
+Mercato is an online marketplace with multi-vendor order fulfillment, built as a portfolio/learning project. **Phases 1 (setup & solution structure) and 2 (domain model & database) are done; Phase 3 (API core) is next.** The domain model, EF Core mappings, first migration and development seed data exist; SQL Server runs in Docker (`deploy/compose/infra.yml`). Test projects were deferred to Phase 11. A session linked to the user's computer through Claude Desktop cannot delete files there; the user deletes them.
 
 ## Build, test, run
 

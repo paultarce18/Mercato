@@ -123,7 +123,7 @@ Phases 1–7 build the monolith; 8–9 extract the services afterwards, delibera
 | # | Phase | End state | Status | Chat / notes |
 |---|-------|-----------|--------|--------------|
 | 1 | Setup & solution structure | Solution with core projects, shared build props, Git repo on GitHub, Angular skeleton | Done 2026-10-29 (test projects deferred to Phase 11) | Phase 1 chat; DECISIONS.md phase log |
-| 2 | Domain model & database | Aggregates, EF Core, SQL Server in Docker, first migration, seed data, SSMS connected | | |
+| 2 | Domain model & database | Aggregates, EF Core, SQL Server in Docker, first migration, seed data, SSMS connected | Done 2026-11-08 | DECISIONS.md phase log (ADR-008…025); DBArchitecture.md |
 | 3 | API core | CQRS handlers, validation, versioning, OpenAPI UI, middleware, ProblemDetails, logging | | |
 | 4 | Auth v1 (Identity + JWT) | Identity, JWT + refresh tokens, roles & policies, vendor tenancy rules | | |
 | 5 | Angular app | Layout, login, catalog/cart/orders screens per role, interceptors, guards | | |

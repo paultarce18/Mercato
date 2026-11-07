@@ -170,8 +170,8 @@ Mercato.Domain/            Mercato.Application/        Mercato.Infrastructure/
 ├─ Common/                 ├─ Common/                  ├─ Persistence/
 │  ├─ Entity.cs            │  ├─ Behaviours/ (validation, logging, transaction)
 │  ├─ AggregateRoot.cs     │  ├─ Abstractions/ (ICommand, IQuery, IUnitOfWork, ...)
-│  ├─ ValueObject.cs       │  └─ Exceptions/           │  ├─ MercatoDbContext.cs
-│  ├─ IDomainEvent.cs      ├─ Identity/                │  ├─ Configurations/<Module>/
+│  ├─ Money.cs             │  └─ Exceptions/           │  ├─ MercatoDbContext.cs
+│  ├─ DomainEvent.cs       ├─ Identity/                │  ├─ Configurations/<Module>/
 │  └─ MercatoException.cs  ├─ Catalog/                 │  ├─ Repositories/<Module>/
 ├─ Identity/               │  ├─ Products/             │  └─ Migrations/
 ├─ Catalog/                │  │  ├─ CreateProduct/     ├─ Messaging/ (outbox, Kafka producer/consumer)
@@ -217,17 +217,20 @@ it); until then `CustomerId` / `UserId` are plain `Guid`s.
 | `catalog` | **Category** | – | Name, IsActive | FR-CT-06: flat list |
 | `catalog` | **Product** | – | VendorId, CategoryId, Name, Description, Sku, Price (`Money`), ImageUrl, IsActive | FR-CT-02; SKU unique per vendor; BR-12 |
 | `inventory` | **InventoryItem** | `StockHold` (CartId, Quantity, ExpiresAt) | ProductId, VendorId, OnHand, Reserved, RowVersion | FR-IN-06: `Available = OnHand − Reserved − active holds ≥ 0`; BR-05/06: `Hold()`, `ReleaseExpired(now)`, `ConvertHoldToReservation()`, `Ship()` decrements stock |
-| `ordering` | **Cart** | `CartItem` (ProductId, VendorId, Quantity, HoldId?) | CustomerId, Status | FR-CA-01: one active cart per customer; FR-CA-04: expired item flagged |
+| `ordering` | **Cart** | `CartItem` (ProductId, VendorId, ProductName, UnitPrice, Quantity, HoldExpiresAt) | CustomerId, Status (`Active` / `CheckedOut`) | FR-CA-01: one active cart per customer; FR-CA-04: expired item flagged |
 | `ordering` | **Order** | `VendorOrder` (VendorId, Status, Subtotal) → `OrderItem` (ProductId, name and unit price snapshot, Quantity) | CustomerId, OrderNumber, Status, ShippingAddress (value object), Total | FR-OR-03: split per vendor at creation; BR-04: prices frozen; FR-OR-07: state machine `Placed → Paid / Rejected`, `Pending → Shipped → Delivered`, `Completed` when all delivered |
 | `payments` | **Payment** | – | OrderId, Amount, Status (Pending / Succeeded / Declined), ProviderReference | FR-PA-01/04 |
-| `shipping` | **Shipment** | – | VendorOrderId, TrackingNumber, Status (Created / Delivered) | FR-SH-02/03 |
+| `shipping` | **Shipment** | – | VendorOrderId, VendorId, TrackingNumber, Status (Created / Delivered) | FR-SH-02/03 |
 | `notifications` | **Notification** | – | UserId, Type, Message, CreatedAt | FR-NO-01 |
 
 Shared building blocks in `Mercato.Domain/Common`: `Entity` (Guid v7 id, equality by type + id),
 `AggregateRoot` (domain-event list), `DomainEvent` (abstract record), `Money` (amount + currency,
 a `record` — value equality comes from the record, so no separate `ValueObject` base class),
-`MercatoException` (base of domain exceptions). The §5 tree is the plan; these are the files
-as built.
+`Guard` (argument checks) and `MercatoException` (base of domain exceptions). The §5 tree is the
+plan; these are the files as built. As built in Phase 2: enums, events and exceptions sit in
+`Enums` / `Events` / `Exceptions` subfolders (`Mercato.Domain.Ordering.Events`); EF configurations
+are one flat `Persistence/Configurations/` folder (not per module); `Persistence/Seeding/` holds
+the development seeder. See `DBArchitecture.md` for the database.
 
 ### 5.2 Worked example: one order through every table
 
