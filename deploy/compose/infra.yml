@@ -12,7 +12,7 @@ services:
       # Read from deploy/compose/.env (not committed); compose stops with a message if it is missing.
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in deploy/compose/.env}
     ports:
-      - "1433:1433"
+      - "127.0.0.1:1433:1433"
     volumes:
       # Keeps the databases when the container is stopped or re-created.
       - sqlserver-data:/var/opt/mssql
