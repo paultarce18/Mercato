@@ -41,6 +41,7 @@ public sealed class OrderItem : Entity
         ArgumentNullException.ThrowIfNull(line);
         Guard.NotEmpty(line.ProductId, nameof(line));
         ArgumentException.ThrowIfNullOrWhiteSpace(line.ProductName, nameof(line));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(line.ProductName.Length, CartItem.ProductNameMaxLength, nameof(line));
         ArgumentNullException.ThrowIfNull(line.UnitPrice, nameof(line));
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(line.Quantity, nameof(line));
         return new OrderItem(NewId(), line);
