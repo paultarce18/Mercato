@@ -127,6 +127,7 @@ public sealed class Product : AggregateRoot
     private static Money ValidatePrice(Money price)
     {
         ArgumentNullException.ThrowIfNull(price);
+        ArgumentOutOfRangeException.ThrowIfZero(price.Amount, nameof(price));
         return price;
     }
 

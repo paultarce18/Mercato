@@ -90,6 +90,7 @@ public sealed class CartItem : Entity
     private static Money ValidateUnitPrice(Money unitPrice)
     {
         ArgumentNullException.ThrowIfNull(unitPrice);
+        ArgumentOutOfRangeException.ThrowIfZero(unitPrice.Amount, nameof(unitPrice));
         return unitPrice;
     }
 
