@@ -26,7 +26,11 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         // "Amount" would collide with the property name inside Money.
         builder.OwnsMoney(payment => payment.Amount, "Payment");
 
-        builder.Property(payment => payment.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(payment => payment.Status)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .IsConcurrencyToken();
 
         // Optional: no property is marked IsRequired, so the columns are nullable. The reference
         // is set when the provider confirms, the reason only when the payment is declined.
