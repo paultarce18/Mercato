@@ -128,7 +128,9 @@ public sealed class Product : AggregateRoot
     {
         ArgumentNullException.ThrowIfNull(price);
         ArgumentOutOfRangeException.ThrowIfZero(price.Amount, nameof(price));
-        return price;
+
+        // EF Core owned types need one Money instance per owner, so the value is copied at this boundary.
+        return price with { };
     }
 
     private static string? ValidateImageUrl(string? imageUrl)

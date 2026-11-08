@@ -26,7 +26,9 @@ public sealed class Payment : AggregateRoot
         : base(id)
     {
         OrderId = orderId;
-        Amount = amount;
+
+        // EF Core owned types need one Money instance per owner, so the value is copied at this boundary.
+        Amount = amount with { };
         CreatedAt = createdAt;
         Status = PaymentStatus.Pending;
     }

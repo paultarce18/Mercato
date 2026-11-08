@@ -91,7 +91,9 @@ public sealed class CartItem : Entity
     {
         ArgumentNullException.ThrowIfNull(unitPrice);
         ArgumentOutOfRangeException.ThrowIfZero(unitPrice.Amount, nameof(unitPrice));
-        return unitPrice;
+
+        // EF Core owned types need one Money instance per owner, so the value is copied at this boundary.
+        return unitPrice with { };
     }
 
     private static int ValidateQuantity(int quantity)

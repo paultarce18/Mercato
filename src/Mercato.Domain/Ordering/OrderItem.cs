@@ -20,7 +20,9 @@ public sealed class OrderItem : Entity
     {
         ProductId = line.ProductId;
         ProductName = line.ProductName;
-        UnitPrice = line.UnitPrice;
+
+        // EF Core owned types need one Money instance per owner, so the value is copied at this boundary.
+        UnitPrice = line.UnitPrice with { };
         Quantity = line.Quantity;
     }
 
