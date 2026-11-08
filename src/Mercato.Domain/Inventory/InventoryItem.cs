@@ -12,6 +12,13 @@ namespace Mercato.Domain.Inventory;
 /// the data; <see cref="RowVersion"/> makes the database accept only one of the two saves
 /// (FR-IN-04, TR-43).
 /// </para>
+/// <para>
+/// A change to the holds alone touches only child rows, which the database does not check against
+/// <see cref="RowVersion"/>. Every hold mutation therefore also increments <see cref="Version"/>,
+/// so each save updates this row too and is checked against its <see cref="RowVersion"/>. On a
+/// conflict the caller reloads the item and repeats the operation, which validates availability
+/// again.
+/// </para>
 /// </summary>
 public sealed class InventoryItem : AggregateRoot
 {
@@ -50,6 +57,9 @@ public sealed class InventoryItem : AggregateRoot
 
     /// <summary>Optimistic concurrency token; maintained by the database, never set in code.</summary>
     public byte[] RowVersion { get; private set; }
+
+    /// <summary>Incremented by every hold mutation, so that saving it also updates this row.</summary>
+    public int Version { get; private set; }
 
     public static InventoryItem Create(Guid productId, Guid vendorId, int onHand)
     {
@@ -93,14 +103,30 @@ public sealed class InventoryItem : AggregateRoot
 
         holds.RemoveAll(hold => hold.CartId == cartId || !hold.IsActiveAt(now));
         holds.Add(StockHold.Create(cartId, quantity, now + HoldDuration));
+        Version++;
     }
 
     /// <summary>Drops the cart's hold, for example when the item is removed from the cart. No-op if there is none.</summary>
-    public void ReleaseHold(Guid cartId) => holds.RemoveAll(hold => hold.CartId == cartId);
+    public void ReleaseHold(Guid cartId)
+    {
+        if (holds.RemoveAll(hold => hold.CartId == cartId) > 0)
+        {
+            Version++;
+        }
+    }
 
     /// <summary>Drops every hold that has expired. Called by the hold-expiry job (FR-IN-03).</summary>
     /// <returns>The number of holds removed.</returns>
-    public int ReleaseExpiredHolds(DateTimeOffset now) => holds.RemoveAll(hold => !hold.IsActiveAt(now));
+    public int ReleaseExpiredHolds(DateTimeOffset now)
+    {
+        int removed = holds.RemoveAll(hold => !hold.IsActiveAt(now));
+        if (removed > 0)
+        {
+            Version++;
+        }
+
+        return removed;
+    }
 
     /// <summary>Checkout: turns the cart's hold into a reservation (FR-IN-05).</summary>
     /// <exception cref="StockHoldNotFoundException">The cart has no hold, or it has expired (BR-06).</exception>
@@ -111,6 +137,7 @@ public sealed class InventoryItem : AggregateRoot
 
         holds.Remove(hold);
         Reserved += hold.Quantity;
+        Version++;
     }
 
     /// <summary>Vendor shipped: the units leave the warehouse (FR-IN-05).</summary>

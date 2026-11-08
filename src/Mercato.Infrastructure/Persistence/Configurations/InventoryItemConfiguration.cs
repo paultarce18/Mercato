@@ -26,6 +26,11 @@ internal sealed class InventoryItemConfiguration : IEntityTypeConfiguration<Inve
         // updates zero rows, and EF throws DbUpdateConcurrencyException instead of overselling.
         builder.Property(item => item.RowVersion).IsRowVersion();
 
+        // A change to the holds alone would update only StockHolds rows, which RowVersion does not
+        // protect. InventoryItem increments Version on every hold mutation, so every such save also
+        // updates this row with "WHERE RowVersion = @old" and two buyers cannot both hold the last unit.
+        builder.Property(item => item.Version).IsRequired();
+
         // One stock record per product. ProductId belongs to the Catalog module, so there is no
         // foreign key to Products (TR-12): modules reference each other by id only.
         builder.HasIndex(item => item.ProductId).IsUnique();

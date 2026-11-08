@@ -164,6 +164,7 @@ Stock of one product and its counters (aggregate `InventoryItem`).
 | `OnHand` | `int` | | Units physically in stock. |
 | `Reserved` | `int` | | Units promised to placed orders, not yet shipped. |
 | `RowVersion` | `rowversion` | | Changed by SQL Server on every update (optimistic concurrency, TR-43). |
+| `Version` | `int` | | Incremented by every hold change, so saving holds also updates this row and checks `RowVersion` (TR-43). |
 
 Indexes: **unique `ProductId`**; `VendorId`.
 
