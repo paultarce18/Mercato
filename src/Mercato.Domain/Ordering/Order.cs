@@ -14,6 +14,13 @@ namespace Mercato.Domain.Ordering;
 /// </code>
 /// Every transition raises a domain event; any other transition throws
 /// <see cref="InvalidOrderTransitionException"/>.
+/// <para>
+/// Every transition, including one that changes only a <see cref="VendorOrder"/>, increments
+/// <see cref="Version"/>, so each save also updates the order row and is checked against it.
+/// Two concurrent deliveries of the last two vendor orders then cannot both save: the second
+/// fails with a concurrency conflict, and the caller reloads the whole order and retries, which
+/// completes it (TR-43).
+/// </para>
 /// </summary>
 public sealed class Order : AggregateRoot
 {
@@ -55,6 +62,9 @@ public sealed class Order : AggregateRoot
     public Money Total { get; private set; }
 
     public IReadOnlyCollection<VendorOrder> VendorOrders => vendorOrders.AsReadOnly();
+
+    /// <summary>Optimistic concurrency token; incremented by every transition of the aggregate.</summary>
+    public int Version { get; private set; }
 
     /// <summary>Creates a placed order and splits the lines into one vendor order per vendor.</summary>
     public static Order Place(
@@ -104,6 +114,7 @@ public sealed class Order : AggregateRoot
         EnsureStatus(OrderStatus.Paid, nameof(VendorOrderStatus.Shipped));
 
         vendorOrder.MarkShipped();
+        Version++;
         Raise(new VendorOrderShipped(Id, vendorOrderId));
     }
 
@@ -118,6 +129,7 @@ public sealed class Order : AggregateRoot
         EnsureStatus(OrderStatus.Paid, nameof(VendorOrderStatus.Delivered));
 
         vendorOrder.MarkDelivered();
+        Version++;
         Raise(new VendorOrderDelivered(Id, vendorOrderId));
 
         if (vendorOrders.All(candidate => candidate.Status == VendorOrderStatus.Delivered))
@@ -134,6 +146,7 @@ public sealed class Order : AggregateRoot
     {
         EnsureStatus(from, to.ToString());
         Status = to;
+        Version++;
     }
 
     private void EnsureStatus(OrderStatus required, string target)

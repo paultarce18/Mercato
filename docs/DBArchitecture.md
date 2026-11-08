@@ -226,6 +226,7 @@ A confirmed purchase from one checkout (aggregate `Order`).
 | `ShippingCountry` | `nvarchar(100)` | | |
 | `PlacedAt` | `datetimeoffset` | | |
 | `TotalAmount` / `TotalCurrency` | `decimal(18,2)` / `nchar(3)` | | Money; sum of all items, frozen. |
+| `Version` | `int` | | Concurrency token; incremented by every order and vendor order transition, so concurrent vendor order updates conflict on this row (TR-43). |
 
 Indexes: **unique `OrderNumber`**; `CustomerId` (order history).
 

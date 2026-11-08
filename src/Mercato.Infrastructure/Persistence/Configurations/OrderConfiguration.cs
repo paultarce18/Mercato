@@ -28,6 +28,12 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(order => order.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(order => order.PlacedAt).IsRequired();
 
+        // Optimistic concurrency (TR-43). Order increments Version on every transition, including
+        // vendor order transitions, so every save updates this row with "WHERE Version = @old".
+        // Two deliveries racing for the last vendor orders cannot both save; the loser gets a
+        // DbUpdateConcurrencyException, reloads the order and retries.
+        builder.Property(order => order.Version).IsConcurrencyToken();
+
         // Columns TotalAmount and TotalCurrency.
         builder.OwnsMoney(order => order.Total, "Total");
 
