@@ -16,9 +16,9 @@ public sealed record Money
         ArgumentOutOfRangeException.ThrowIfNegative(amount);
         ArgumentException.ThrowIfNullOrWhiteSpace(currency);
 
-        if (currency.Length != CurrencyCodeLength)
+        if (currency.Length != CurrencyCodeLength || !string.Equals(currency, DefaultCurrency, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("Currency must be a three-letter ISO 4217 code.", nameof(currency));
+            throw new ArgumentException("Currency must be EUR in V1.", nameof(currency));
         }
 
         if (decimal.Round(amount, 2) != amount)
